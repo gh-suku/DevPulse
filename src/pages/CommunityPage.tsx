@@ -76,7 +76,8 @@ export const CommunityPage: React.FC = () => {
       const { data, error } = await supabase
         .from('community_posts_with_user')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50); // Issue #34: Add pagination limit
 
       if (error) throw error;
       setPosts(data || []);

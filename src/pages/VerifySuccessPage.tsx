@@ -4,8 +4,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { CheckCircle2, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
 export const VerifySuccessPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -76,7 +74,7 @@ export const VerifySuccessPage: React.FC = () => {
     setErrorMessage('');
 
     try {
-      // Get user email from URL or prompt
+      // Use Supabase's built-in resend functionality
       const email = searchParams.get('email');
       if (!email) {
         setErrorMessage('Email address not found. Please sign up again.');
@@ -84,23 +82,18 @@ export const VerifySuccessPage: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/auth/send-verification`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          userName: 'User',
-          verificationUrl: `${window.location.origin}/verify-success`,
-        }),
+      // Resend verification email using Supabase
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
       });
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to send verification email');
+      if (error) {
+        throw error;
       }
 
-      navigate('/signup');
+      setErrorMessage('');
+      alert('Verification email sent! Please check your inbox.');
     } catch (error: any) {
       console.error('Resend error:', error);
       setErrorMessage(error.message || 'Failed to resend email. Please try signing up again.');

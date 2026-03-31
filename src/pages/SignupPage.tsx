@@ -71,10 +71,18 @@ export const SignupPage: React.FC = () => {
 
       if (data.user) {
         console.log('Signup successful:', data.user.email);
-        setSuccessMessage('Account created successfully! Redirecting...');
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1500);
+        
+        // Check if email confirmation is required
+        if (data.user.identities && data.user.identities.length === 0) {
+          // Email confirmation is enabled - user needs to verify
+          setSuccessMessage('Account created! Please check your email to verify your account before signing in.');
+        } else {
+          // Email confirmation is disabled - redirect to dashboard
+          setSuccessMessage('Account created successfully! Redirecting...');
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 1500);
+        }
       }
     } catch (error: any) {
       console.error('Signup error:', error);

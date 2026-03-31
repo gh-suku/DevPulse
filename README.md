@@ -2,6 +2,44 @@
 
 A productivity tracking application with goals, tasks, leaderboard, and insights features.
 
+## 🎉 Latest Update - Version 1.1.0
+
+**20 critical issues fixed!** This update includes major improvements to security, performance, features, and documentation.
+
+### What's New
+- ✅ Task priorities and due dates
+- ✅ Search and filter functionality
+- ✅ Keyboard shortcuts
+- ✅ PWA support (install as app)
+- ✅ Database performance optimization (40+ indexes)
+- ✅ Rate limiting and file validation
+- ✅ Comprehensive documentation
+
+**📚 See [README-UPDATES.md](README-UPDATES.md) for complete details**
+
+## 📖 Documentation
+
+### Quick Start
+- **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** - Quick start guide and common tasks
+- **[DEPLOYMENT-CHECKLIST.md](DEPLOYMENT-CHECKLIST.md)** - Step-by-step deployment checklist
+
+### Detailed Guides
+- **[FIXES-SUMMARY.md](FIXES-SUMMARY.md)** - Complete list of all 20 fixes
+- **[API-DOCUMENTATION.md](API-DOCUMENTATION.md)** - Database schema and API reference
+- **[TESTING-GUIDE.md](TESTING-GUIDE.md)** - Testing strategy and examples
+- **[DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md)** - Comprehensive deployment guide
+
+### Reference
+- **[issues.md](issues.md)** - Complete issue tracker with status
+
+## ⚠️ SECURITY WARNING
+
+**CRITICAL**: If you have previously committed `.env` files with API keys to version control:
+1. **Immediately rotate all exposed keys** in Supabase, Gemini, and Resend dashboards
+2. Remove sensitive files from git history: `git filter-branch --force --index-filter "git rm --cached --ignore-unmatch .env" --prune-empty --tag-name-filter cat -- --all`
+3. Force push: `git push origin --force --all`
+4. Never commit `.env` files again - use `.env.example` as a template
+
 ## Quick Setup
 
 ### 1. Install Dependencies
@@ -10,11 +48,14 @@ npm install
 ```
 
 ### 2. Configure Environment
-Create a `.env` file with your Supabase credentials:
+Copy `.env.example` to `.env` and fill in your credentials:
+```bash
+cp .env.example .env
 ```
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+
+Then edit `.env` with your actual Supabase, Gemini, and Resend credentials.
+
+**Never commit `.env` to version control!**
 
 ### 3. Setup Database
 Run the SQL files in the `supabase/` folder in sequence:

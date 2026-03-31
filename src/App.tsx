@@ -42,15 +42,7 @@ import {
   Cell 
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-/**
- * Utility for Tailwind class merging
- */
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from './lib/utils';
 
 // --- Types ---
 
@@ -87,20 +79,7 @@ interface Attribute {
 
 // --- Components ---
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  title?: string;
-  className?: string;
-  onClick?: () => void;
-  key?: React.Key;
-}
-
-const Card = ({ children, className, title, ...props }: CardProps) => (
-  <div className={cn("bg-white rounded-xl shadow-sm border border-gray-100 p-6 overflow-visible", className)} {...props}>
-    {title && <h3 className="text-lg font-semibold mb-4 text-gray-800">{title}</h3>}
-    {children}
-  </div>
-);
+import { Card } from './components/shared/Card';
 const KPICard = ({ title, value, change, trend, icon: Icon }: { title: string, value: string | number, change: string, trend: 'up' | 'down', icon: any }) => (
   <Card className="flex flex-col gap-2">
     <div className="flex justify-between items-start">

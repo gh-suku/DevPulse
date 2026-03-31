@@ -13,28 +13,17 @@ import {
   Plus,
   Save
 } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  title?: string;
-  className?: string;
-}
-
-const Card = ({ children, className, title, ...props }: CardProps) => (
-  <div className={cn("bg-white rounded-xl shadow-sm border border-gray-100 p-6 min-w-0", className)} {...props}>
-    {title && <h3 className="text-lg font-semibold mb-4 text-gray-800">{title}</h3>}
-    {children}
-  </div>
-);
+import { cn } from '../lib/utils';
+import { Card } from './shared/Card';
+import { ConfirmDialog } from './shared/ConfirmDialog';
+import { Toast, useToast } from './shared/Toast';
+import { EmptyState } from './shared/EmptyState';
+import { errorHandler } from '../lib/errorHandler';
+import { exportToCSV, exportInsightsReport } from '../lib/dataExport';
 
 export default function InsightsScreen() {
   const { user } = useAuth();
+  const { toast, showToast, hideToast } = useToast();
   const [attributes, setAttributes] = useState<any[]>([]);
   const [weeklySummary, setWeeklySummary] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
@@ -43,6 +32,19 @@ export default function InsightsScreen() {
   const [newAttributeName, setNewAttributeName] = useState('');
   const [newAttributeCategory, setNewAttributeCategory] = useState('general');
   const [editingAttributeId, setEditingAttributeId] = useState<string | null>(null);
+  
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = React.useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
 
   useEffect(() => {
     if (user) {
@@ -198,19 +200,29 @@ export default function InsightsScreen() {
   };
 
   const deleteAttribute = async (id: string) => {
-    if (!user || !confirm('Delete this attribute?')) return;
-    try {
-      const { error } = await supabase
-        .from('attributes')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
+    if (!user) return;
+    
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Attribute',
+      message: 'Are you sure you want to delete this attribute? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase
+            .from('attributes')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', user.id);
 
-      if (error) throw error;
-      await fetchAttributes();
-    } catch (error) {
-      console.error('Error deleting attribute:', error);
-    }
+          if (error) throw error;
+          await fetchAttributes();
+          showToast('Attribute deleted successfully', 'success');
+        } catch (error) {
+          errorHandler.log(error, 'medium', { action: 'deleteAttribute' });
+          showToast('Failed to delete attribute', 'error');
+        }
+      }
+    });
   };
 
   const updateAttribute = async (id: string, updates: any) => {
@@ -230,8 +242,75 @@ export default function InsightsScreen() {
     }
   };
 
+  // Issue #21: Export functionality
+  const handleExportCSV = async () => {
+    try {
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user?.id);
+
+      const { data: logs } = await supabase
+        .from('daily_logs')
+        .select('*')
+        .eq('user_id', user?.id);
+
+      exportToCSV(
+        [...(tasks || []), ...(logs || [])],
+        `devpulse-data-${Date.now()}`
+      );
+      showToast('Data exported successfully', 'success');
+    } catch (error) {
+      errorHandler.log(error, 'medium', { action: 'exportCSV' });
+      showToast('Failed to export data', 'error');
+    }
+  };
+
+  const handleExportReport = async () => {
+    try {
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user?.id);
+
+      const { data: logs } = await supabase
+        .from('daily_logs')
+        .select('*')
+        .eq('user_id', user?.id);
+
+      exportInsightsReport({
+        goals,
+        tasks: tasks || [],
+        logs: logs || [],
+        attributes,
+        summary: weeklySummary,
+      });
+      showToast('Report exported successfully', 'success');
+    } catch (error) {
+      errorHandler.log(error, 'medium', { action: 'exportReport' });
+      showToast('Failed to export report', 'error');
+    }
+  };
+
   return (
-    <div className="space-y-6 md:space-y-8 min-w-0">
+    <>
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
+      
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant="danger"
+      />
+      
+      <div className="space-y-6 md:space-y-8 min-w-0">
       {/* Weekly Summary Section */}
       <div>
         <h2 className="text-xl font-bold text-gray-900 mb-4">Weekly Summary</h2>
@@ -336,12 +415,22 @@ export default function InsightsScreen() {
 
             <Card title="Export Options">
               <div className="grid grid-cols-2 gap-4">
-                <button className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">PDF</div>
+                <button 
+                  onClick={handleExportReport}
+                  className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+                    <Download className="w-5 h-5" />
+                  </div>
                   <span className="text-xs font-bold text-gray-600">Report</span>
                 </button>
-                <button className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">CSV</div>
+                <button 
+                  onClick={handleExportCSV}
+                  className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                    <Download className="w-5 h-5" />
+                  </div>
                   <span className="text-xs font-bold text-gray-600">Raw Data</span>
                 </button>
               </div>
@@ -460,13 +549,19 @@ export default function InsightsScreen() {
           ))}
 
           {attributes.length === 0 && (
-            <div className="col-span-full text-center py-12 text-gray-400">
-              <Star className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p className="text-sm">No attributes yet. Add your first attribute above!</p>
+            <div className="col-span-full">
+              <EmptyState
+                icon={Star}
+                title="No attributes yet"
+                description="Track your personal and professional attributes to measure growth"
+                actionLabel="Add Your First Attribute"
+                onAction={() => setIsAddingAttribute(true)}
+              />
             </div>
           )}
         </div>
       </div>
     </div>
+    </>
   );
 }

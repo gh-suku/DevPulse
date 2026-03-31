@@ -66,7 +66,8 @@ export const LeaderboardPage: React.FC = () => {
           department,
           points
         `)
-        .order('points', { ascending: false });
+        .order('points', { ascending: false })
+        .limit(100); // Issue #34: Add pagination limit
 
       if (profilesError) throw profilesError;
 
